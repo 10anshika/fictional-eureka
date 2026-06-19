@@ -1,29 +1,144 @@
-# D2C meets fintech reconciliation
+# 🚀 Fictional Eureka
 
-## Overview
-**D2C meets fintech reconciliation** is a hands-on demonstration project built to showcase strong Product ownership for the **Product Intern** role at Logibricks Technologies (LogiRecon).
+> **D2C meets Fintech Reconciliation**  
+> A production-grade product demonstration 
 
-This project bridges **D2C & Quick Commerce** operations with **Fintech Reconciliation**. It automates settlement matching across platforms (Shopify, WooCommerce, Razorpay, etc.), handles complex data flows, detects discrepancies, and includes an **AI-powered internal tool** for smart classification and workflows.
+**Built to showcase end-to-end product thinking** — from PRD to polished implementation.
+---
 
-**This project directly addresses the job requirements:**
-- Owning PRDs and feature specs end-to-end
-- Working with engineering on APIs and database-level logic
-- Building AI-powered internal tools (prompts, workflows, automations)
-- Deep-diving into e-commerce / quick commerce ecosystems
-- Understanding fintech reconciliation, data flows, and edge cases firsthand
-- Articulating product thinking clearly
+## ⚡ At a Glance
 
-## Problem Space (Product Thinking)
-In D2C and quick commerce, settlement reconciliation is messy due to fee mismatches, partial returns, timing issues, GST variations, and platform-specific rules. This project demonstrates how to solve these real problems with a combination of robust logic and AI assistance.
+| Aspect                  | Details                                      |
+|-------------------------|----------------------------------------------|
+| **Role Targeted**       | Product Intern                               |
+| **Core Focus**          | D2C + Quick Commerce Fintech Reconciliation  |
+| **Key Deliverable**     | AI-Powered Discrepancy Classifier            |
+| **Time to Understand**  | < 10 seconds                                 |
+| **Live Demo Ready**     | ✅ AI Classifier + Dashboard + Full App      |
 
-## Features Implemented (For Logibricks Interview)
+---
 
-- **PRD Ownership**: Full Product Requirements Document for AI Discrepancy Classifier (see docs/PRD_AI_Discrepancy_Classifier.md)
-- **API Logic**: New endpoint `/api/ai/classify` for AI-powered classification
-- **Database Level Logic**: AI results (classification, confidence, explanation, suggested action) stored in database
-- **AI Internal Tool**: Structured LLM prompts + automation workflow for discrepancy handling
-- **E-commerce & Quick Commerce Focus**: Handles reconciliation data flows, partial returns, fee mismatches, GST issues, and same-day return edge cases
+## 📋 What This Project Demonstrates
 
-This project demonstrates end-to-end product thinking from PRD to implementation.
+This project was deliberately built to map directly to Logibricks Product Intern requirements:
 
-See [TEST.md](./TEST.md) for instructions on testing the AI Discrepancy Classifier.
+| Logibricks Requirement                  | How It's Demonstrated                                                                 | Evidence |
+|-----------------------------------------|---------------------------------------------------------------------------------------|----------|
+| **Owning PRDs end-to-end**              | Full Product Requirements Document for AI feature                                    | [PRD →](./docs/PRD_AI_Discrepancy_Classifier_Comprehensive.md) |
+| **Working with engineering on APIs**    | Designed and delivered production-ready `/api/ai/classify` endpoint                  | `backend/routes/ai.py` + registration in `main.py` |
+| **Database-level logic**                | AI classification results persisted with full schema design                          | `ai_classification`, `ai_confidence`, `ai_explanation`, `ai_suggested_action`, `ai_processed_at` |
+| **Building AI-powered internal tools**  | Structured LLM prompt + classification workflow with graceful fallbacks              | Domain-specific prompt for Indian D2C/Quick Commerce |
+| **Deep e-commerce / quick commerce**    | Native support for Shopify + WooCommerce + Razorpay with realistic data flows        | Multi-platform reconciliation engine |
+| **Fintech reconciliation & edge cases** | Handles ghost orders, refund traps, partial returns, fee mismatches, GST/ITC issues  | Reconciliation logic + alerts + exports |
+
+---
+
+## 🛠 Tech Stack
+
+**Backend**
+- FastAPI + Uvicorn
+- Supabase (PostgreSQL + Row Level Security + Auth)
+- Python (Pydantic, httpx)
+- Platform integrations: Shopify Admin API, WooCommerce, Razorpay
+
+**Frontend**
+- Next.js 14 + TypeScript + React
+- Tailwind CSS + Radix UI + shadcn components
+- Supabase client
+- Recharts (visualizations)
+
+**Other**
+- Celery + Redis (background jobs)
+- Resend (email alerts)
+- Full database schema with audit logs, thresholds, and multi-platform support
+
+---
+
+## ✨ Key Features
+
+- **🤖 AI Discrepancy Classifier**  
+  `POST /api/ai/classify` — Returns structured classification, confidence score, explanation, and suggested action. Works with or without LLM key (smart fallback).
+
+- **🔄 Multi-Platform Reconciliation Engine**  
+  Shopify + WooCommerce order matching against Razorpay settlements. Detects ghost orders, variances, refund traps, and partial refunds.
+
+- **📊 Modern Dashboard**  
+  Real-time transaction view, filters by platform/status, AI insights visible in the UI.
+
+- **🔔 Intelligent Alerts**  
+  Configurable thresholds for ghost orders and variances. Multi-channel support (email, Slack, WhatsApp).
+
+- **📤 Export & Compliance**  
+  Tally ERP export + ITC recovery reporting (Razorpay fees + GST).
+
+- **🔐 Enterprise-Grade Foundations**  
+  Supabase RLS, encrypted credentials, audit logs, role-based access (Owner/Admin/CA/Viewer).
+
+---
+
+## 🚀 How to Run
+
+### 1. Backend
+```bash
+cd backend
+pip install -r requirements.txt
+
+# Required: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (for full app)
+# Optional: LLM_API_KEY (for real AI responses; works without it)
+uvicorn backend.main:app --reload --port 8000
+```
+
+### 2. Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 3. Test the AI Tool (works standalone)
+See **[TEST.md](./TEST.md)** for the exact curl command. The `/api/ai/classify` endpoint runs without Supabase or LLM keys.
+
+```bash
+curl -X POST http://localhost:8000/api/ai/classify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "order_id": "ORD12345",
+    "platform": "Shopify",
+    "expected_amount": 2500.00,
+    "actual_amount": 2480.00,
+    "difference": -20.00,
+    "notes": "Possible commission rate change during sale"
+  }'
+```
+
+> The endpoint returns clean JSON and attempts to persist results when matching transaction data exists.
+
+---
+
+## 📄 Product Requirements Document
+
+**Full PRD for the AI Discrepancy Classifier** (including problem statement, user stories, functional requirements, edge cases, and success metrics):
+
+→ **[docs/PRD_AI_Discrepancy_Classifier_Comprehensive.md](./docs/PRD_AI_Discrepancy_Classifier_Comprehensive.md)**
+
+This document demonstrates clear product thinking, scoping, and communication skills.
+
+---
+
+## 💡 Why This Project?
+
+**Fictional Eureka**:
+
+- End-to-end ownership of a real, high-impact problem (settlement reconciliation)
+- Clear product documentation (PRD)
+- Hands-on collaboration with engineering (API + DB schema design)
+- Practical use of AI as an internal productivity tool
+- Deep understanding of D2C, Quick Commerce, and Fintech edge cases
+
+This is not just a side project — it’s a **portfolio piece** built to reflect the exact responsibilities of a Product Intern at a fintech/e-commerce company.
+
+---
+
+**Built with ❤️ by Anshika**
+
+*Ready for discussion. Happy to walk through the PRD, API design decisions, or reconciliation logic.*
