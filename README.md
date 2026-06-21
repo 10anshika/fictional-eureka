@@ -1,7 +1,7 @@
 # 🚀 Fictional Eureka
 
 > **D2C meets Fintech Reconciliation**  
-> A production-grade product demonstration 
+> A production-minded product demonstration
 
 **Built to showcase end-to-end product thinking** — from PRD to polished implementation.
 ---
@@ -14,7 +14,7 @@
 | **Core Focus**          | D2C + Quick Commerce Fintech Reconciliation  |
 | **Key Deliverable**     | AI-Powered Discrepancy Classifier            |
 | **Time to Understand**  | < 10 seconds                                 |
-| **Live Demo Ready**     | ✅ AI Classifier + Dashboard + Full App      |
+| **Demo Ready**          | ✅ Standalone classifier + authenticated app |
 
 ---
 
@@ -25,7 +25,7 @@ This project was deliberately built to map directly to Logibricks Product Intern
 | Logibricks Requirement                  | How It's Demonstrated                                                                 | Evidence |
 |-----------------------------------------|---------------------------------------------------------------------------------------|----------|
 | **Owning PRDs end-to-end**              | Full Product Requirements Document for AI feature                                    | [PRD →](./docs/PRD_AI_Discrepancy_Classifier_Comprehensive.md) |
-| **Working with engineering on APIs**    | Designed and delivered production-ready `/api/ai/classify` endpoint                  | `backend/routes/ai.py` + registration in `main.py` |
+| **Working with engineering on APIs**    | Designed a public demo classifier and authenticated persistence endpoint             | `backend/routes/ai.py` + registration in `main.py` |
 | **Database-level logic**                | AI classification results persisted with full schema design                          | `ai_classification`, `ai_confidence`, `ai_explanation`, `ai_suggested_action`, `ai_processed_at` |
 | **Building AI-powered internal tools**  | Structured LLM prompt + classification workflow with graceful fallbacks              | Domain-specific prompt for Indian D2C/Quick Commerce |
 | **Deep e-commerce / quick commerce**    | Native support for Shopify + WooCommerce + Razorpay with realistic data flows        | Multi-platform reconciliation engine |
@@ -57,7 +57,7 @@ This project was deliberately built to map directly to Logibricks Product Intern
 ## ✨ Key Features
 
 - **🤖 AI Discrepancy Classifier**  
-  `POST /api/ai/classify` — Returns structured classification, confidence score, explanation, and suggested action. Works with or without LLM key (smart fallback).
+  `POST /api/ai/classify` returns a safe, stateless demo classification. Authenticated users can run `POST /api/transactions/{id}/classify` to persist an analysis to their organization’s transaction.
 
 - **🔄 Multi-Platform Reconciliation Engine**  
   Shopify + WooCommerce order matching against Razorpay settlements. Detects ghost orders, variances, refund traps, and partial refunds.
@@ -71,28 +71,38 @@ This project was deliberately built to map directly to Logibricks Product Intern
 - **📤 Export & Compliance**  
   Tally ERP export + ITC recovery reporting (Razorpay fees + GST).
 
-- **🔐 Enterprise-Grade Foundations**  
+- **🔐 Enterprise-Oriented Foundations**
   Supabase RLS, encrypted credentials, audit logs, role-based access (Owner/Admin/CA/Viewer).
 
 ---
 
 ## 🚀 How to Run
 
-### 1. Backend
+### 1. Backend (from the repository root)
 ```bash
-cd backend
-pip install -r requirements.txt
+# Python 3.11 is required (the repository pins 3.11.8).
+pip install -r backend/requirements.txt
 
-# Required: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (for full app)
-# Optional: LLM_API_KEY (for real AI responses; works without it)
+# Required for data-backed routes: Supabase credentials + FERNET_KEY
+# Optional but recommended: LLM_API_KEY for real AI classification
+# Required when enabling Shopify webhooks: SHOPIFY_WEBHOOK_SECRET
+# Razorpay webhook secret is configured per org during Razorpay connect
 uvicorn backend.main:app --reload --port 8000
 ```
 
 ### 2. Frontend
 ```bash
+# Node.js 20 is recommended (see .nvmrc).
 cd frontend
 npm install
 npm run dev
+```
+
+For local development, create `frontend/.env.local` with:
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 ### 3. Test the AI Tool (works standalone)
@@ -111,7 +121,7 @@ curl -X POST http://localhost:8000/api/ai/classify \
   }'
 ```
 
-> The endpoint returns clean JSON and attempts to persist results when matching transaction data exists.
+> The public endpoint never reads or writes application data. Use the authenticated transaction-classification endpoint to persist results.
 
 ---
 

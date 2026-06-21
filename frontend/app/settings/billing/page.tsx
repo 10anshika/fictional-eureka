@@ -3,13 +3,18 @@
 // Billing: GMV history, plan, exports, ITC report
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api, paiseTo, type GMVHistory, type ITCReport, type ExportRecord } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 export default function BillingPage() {
+  const router = useRouter();
   const [gmvHistory, setGmvHistory] = useState<GMVHistory[]>([]);
   const [itc, setItc] = useState<ITCReport | null>(null);
   const [exports, setExports] = useState<ExportRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [loadError, setLoadError] = useState("");
 
   // Export form
   const [exportFmt, setExportFmt] = useState("tally");
@@ -23,14 +28,27 @@ export default function BillingPage() {
   const [exportMsg, setExportMsg] = useState("");
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        router.replace("/login");
+      } else {
+        setAuthChecked(true);
+      }
+    });
+  }, [router]);
+
+  useEffect(() => {
+    if (!authChecked) return;
     Promise.all([
       api.getGMVHistory(),
       api.getITCReport(),
     ]).then(([g, i]) => {
       setGmvHistory(g.history);
       setItc(i);
+    }).catch((err: unknown) => {
+      setLoadError(err instanceof Error ? err.message : "Unable to load billing data");
     }).finally(() => setLoading(false));
-  }, []);
+  }, [authChecked]);
 
   async function handleExport(e: React.FormEvent) {
     e.preventDefault();
@@ -59,7 +77,7 @@ export default function BillingPage() {
     setExporting(false);
   }
 
-  if (loading) return (
+  if (!authChecked || loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
     </div>
@@ -74,6 +92,12 @@ export default function BillingPage() {
       </nav>
 
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+
+        {loadError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {loadError}
+          </div>
+        )}
 
         {/* ITC Recovery Card */}
         {itc && (

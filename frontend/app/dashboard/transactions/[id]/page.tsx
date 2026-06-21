@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { api, paiseTo, RECON_STATUS_LABELS, RECON_STATUS_COLORS, type Transaction } from "@/lib/api";
 
 export default function TransactionDetailPage() {
@@ -11,16 +12,50 @@ export default function TransactionDetailPage() {
   const router = useRouter();
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [classifying, setClassifying] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        router.replace("/login");
+      } else {
+        setAuthChecked(true);
+      }
+    });
+  }, [router]);
+
+  useEffect(() => {
+    if (!authChecked) return;
     api.getTransaction(id)
       .then(setTxn)
-      .catch(e => setError(e.message))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, authChecked]);
 
-  if (loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
+  async function handleClassify() {
+    if (!txn) return;
+    setClassifying(true);
+    setError("");
+    try {
+      const result = await api.classifyTransaction(id);
+      setTxn({
+        ...txn,
+        ai_classification: result.classification,
+        ai_confidence: result.confidence,
+        ai_explanation: result.explanation,
+        ai_suggested_action: result.suggested_action,
+        ai_processed_at: result.processed_at,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Classification failed");
+    } finally {
+      setClassifying(false);
+    }
+  }
+
+  if (!authChecked || loading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
   if (error) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-red-600">{error}</div>;
   if (!txn) return null;
 
@@ -69,6 +104,31 @@ export default function TransactionDetailPage() {
               <strong>👻 Ghost Order:</strong> This Shopify order has no matching Razorpay payment. Either the payment was made via another gateway or this order was manually marked as paid. Verify with your finance team.
             </div>
           )}
+
+          <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="font-semibold text-violet-950">AI discrepancy analysis</h2>
+                {txn.ai_classification ? (
+                  <div className="mt-2 space-y-2 text-sm text-violet-900">
+                    <p><strong>{txn.ai_classification}</strong> · {txn.ai_confidence}% confidence</p>
+                    <p>{txn.ai_explanation}</p>
+                    <p><strong>Suggested action:</strong> {txn.ai_suggested_action}</p>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm text-violet-700">Classify this discrepancy and save the result to its audit record.</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleClassify}
+                disabled={classifying}
+                className="shrink-0 rounded-lg bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-800 disabled:opacity-50"
+              >
+                {classifying ? "Analyzing..." : txn.ai_classification ? "Analyze again" : "Analyze"}
+              </button>
+            </div>
+          </div>
 
           <div className="divide-y divide-slate-100">
             {rows.map(row => (

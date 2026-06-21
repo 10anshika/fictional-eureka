@@ -14,6 +14,11 @@ logger = logging.getLogger(__name__)
 @lru_cache
 def get_db() -> Client:
     """Return cached Supabase service-role client."""
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+        raise RuntimeError(
+            "Supabase is not configured. Set SUPABASE_URL and "
+            "SUPABASE_SERVICE_ROLE_KEY to use data-backed routes."
+        )
     client = create_client(
         settings.SUPABASE_URL,
         settings.SUPABASE_SERVICE_ROLE_KEY,
@@ -24,6 +29,10 @@ def get_db() -> Client:
 
 def get_anon_db() -> Client:
     """Return Supabase anon client (for user-scoped queries with JWT)."""
+    if not settings.SUPABASE_URL or not settings.SUPABASE_ANON_KEY:
+        raise RuntimeError(
+            "Supabase is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY."
+        )
     return create_client(
         settings.SUPABASE_URL,
         settings.SUPABASE_ANON_KEY,

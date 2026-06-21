@@ -14,7 +14,7 @@ POST /api/ai/classify
   "notes": "Possible commission rate change during sale"
 }
 
-3. Check the response and database for saved AI classification.
+3. Check the structured response. This public demo endpoint is intentionally stateless.
 
 ---
 
@@ -23,9 +23,9 @@ POST /api/ai/classify
 **Start the backend (from repo root):**
 
 ```bash
-cd backend
-pip install -r requirements.txt
-# Set env vars as needed (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and optionally LLM_API_KEY)
+pip install -r backend/requirements.txt
+# No environment variables are needed for the deterministic classifier.
+# Set LLM_API_KEY to use the configured LLM instead.
 uvicorn backend.main:app --reload --port 8000
 ```
 
@@ -47,5 +47,12 @@ curl -X POST http://localhost:8000/api/ai/classify \
 **Notes:**
 - The endpoint works with or without `LLM_API_KEY` (falls back to a deterministic demo classification).
 - AI classification + confidence + explanation + suggested_action are returned in the response.
-- If a reconciled transaction with matching `shopify_order_id` exists in the database, the AI fields are also written to that row.
-- You can verify saved data via the `/api/transactions` endpoint (after auth) or directly in Supabase.
+- The public endpoint does not access Supabase.
+- Authenticated app users can persist classification with `POST /api/transactions/{transaction_id}/classify`.
+
+### Automated checks
+
+```bash
+pip install -r backend/requirements-dev.txt
+pytest
+```

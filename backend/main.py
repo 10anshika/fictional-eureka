@@ -10,8 +10,8 @@ Security:
 - No PII ever returned
 """
 
+import json
 import logging
-import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, date
 from typing import Any, Annotated
@@ -31,9 +31,10 @@ from backend.db import get_db
 from backend.crypto import encrypt, decrypt
 from backend.sync import SyncOrchestrator, run_all_orgs_sync
 from backend.tally import ExportEngine
+from backend.webhooks import run_org_sync, verify_razorpay_signature, verify_shopify_signature
 
 # AI internal tool router
-from backend.routes.ai import router as ai_router
+from backend.routes.ai import DiscrepancyData, classify_data, router as ai_router
 
 # ─── Sentry ───────────────────────────────────────────────────
 if settings.SENTRY_DSN:
@@ -337,7 +338,7 @@ async def connect_woocommerce(
 
     db.table("audit_logs").insert({
         "org_id": org_id,
-        "action": "connect_shopify",
+        "action": "connect_woocommerce",
         "metadata": {"platform": "woocommerce", "site_url": body.site_url},
     }).execute()
 
@@ -354,7 +355,7 @@ async def disconnect_woocommerce(
     ).execute()
     db.table("audit_logs").insert({
         "org_id": user["org_id"],
-        "action": "disconnect_shopify",
+        "action": "disconnect_woocommerce",
         "metadata": {"platform": "woocommerce"},
     }).execute()
     return {"ok": True}
@@ -429,6 +430,55 @@ def _add_connected_platform(db, org_id: str, platform: str) -> None:
 
 # ─── Razorpay Connect ─────────────────────────────────────────
 
+async def _process_org_sync(org_id: str) -> None:
+    """Run an org sync as a FastAPI background task."""
+    try:
+        await run_org_sync(org_id, SyncOrchestrator)
+    except Exception:
+        logger.exception("Background webhook sync failed for org %s", org_id)
+
+
+def _verify_shopify_webhook_signature(body: bytes, signature: str) -> bool:
+    return verify_shopify_signature(
+        body, signature, settings.SHOPIFY_WEBHOOK_SECRET or ""
+    )
+
+
+def _find_org_by_shop_domain(shop_domain: str) -> str | None:
+    db = get_db()
+    result = (
+        db.table("shopify_credentials")
+        .select("org_id")
+        .eq("shop_domain", shop_domain)
+        .eq("is_active", True)
+        .maybe_single()
+        .execute()
+    )
+    return result.data["org_id"] if result.data else None
+
+
+def _find_org_by_razorpay_signature(payload: bytes, signature: str) -> str | None:
+    db = get_db()
+    result = (
+        db.table("razorpay_credentials")
+        .select("org_id, webhook_secret")
+        .eq("is_active", True)
+        .execute()
+    )
+
+    for row in result.data or []:
+        secret = row.get("webhook_secret")
+        if not secret:
+            continue
+        try:
+            decrypted_secret = decrypt(secret)
+            if verify_razorpay_signature(payload, signature, decrypted_secret):
+                return row["org_id"]
+        except Exception:
+            continue
+    return None
+
+
 @app.post("/api/connect/razorpay")
 @limiter.limit("10/minute")
 async def connect_razorpay(
@@ -460,6 +510,21 @@ async def connect_razorpay(
         "action": "connect_razorpay",
     }).execute()
 
+    return {"ok": True}
+
+
+@app.delete("/api/connect/razorpay")
+async def disconnect_razorpay(
+    user: dict = Depends(require_owner_or_admin),
+):
+    db = get_db()
+    db.table("razorpay_credentials").update({"is_active": False}).eq(
+        "org_id", user["org_id"]
+    ).execute()
+    db.table("audit_logs").insert({
+        "org_id": user["org_id"],
+        "action": "disconnect_razorpay",
+    }).execute()
     return {"ok": True}
 
 
@@ -568,6 +633,56 @@ async def get_transaction(
     if not result.data:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return result.data
+
+
+@app.post("/api/transactions/{transaction_id}/classify")
+@limiter.limit("20/minute")
+async def classify_transaction(
+    request: Request,
+    transaction_id: str,
+    org_id: str = Depends(get_org_id),
+):
+    """Classify and persist one transaction inside the authenticated org."""
+    db = get_db()
+    result = (
+        db.table("reconciled_transactions")
+        .select(
+            "id, shopify_order_id, shopify_amount_paise, razorpay_amount_paise, "
+            "variance_paise, recon_status, transaction_type, ecom_platform"
+        )
+        .eq("id", transaction_id)
+        .eq("org_id", org_id)
+        .maybe_single()
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    transaction = result.data
+    expected = (transaction.get("shopify_amount_paise") or 0) / 100
+    actual = (transaction.get("razorpay_amount_paise") or 0) / 100
+    classification = await classify_data(DiscrepancyData(
+        order_id=transaction["shopify_order_id"],
+        platform=transaction.get("ecom_platform") or "shopify",
+        expected_amount=expected,
+        actual_amount=actual,
+        difference=actual - expected,
+        notes=(
+            f"Reconciliation status: {transaction.get('recon_status')}; "
+            f"transaction type: {transaction.get('transaction_type')}"
+        ),
+    ))
+
+    update = classification.model_dump()
+    db.table("reconciled_transactions").update({
+        "ai_classification": update["classification"],
+        "ai_confidence": update["confidence"],
+        "ai_explanation": update["explanation"],
+        "ai_suggested_action": update["suggested_action"],
+        "ai_processed_at": update["processed_at"],
+    }).eq("id", transaction_id).eq("org_id", org_id).execute()
+
+    return classification
 
 
 # ─── Sync Logs ────────────────────────────────────────────────
@@ -782,14 +897,13 @@ async def mark_notification_read(
 
 
 
-# ─── Webhooks (placeholders — verified, safe to extend) ───────
+# ─── Verified webhook triggers ────────────────────────────────
 
 @app.post("/api/webhooks/razorpay")
-async def razorpay_webhook(request: Request):
+async def razorpay_webhook(request: Request, background_tasks: BackgroundTasks):
     """
     Razorpay webhook receiver.
     Verifies HMAC-SHA256 signature before processing.
-    Currently logs events; extend to process payment.captured, refund.processed etc.
     """
     signature = request.headers.get("X-Razorpay-Signature", "")
     body_bytes = await request.body()
@@ -797,42 +911,65 @@ async def razorpay_webhook(request: Request):
     if not signature:
         raise HTTPException(status_code=400, detail="Missing webhook signature")
 
-    # Load webhook secret for org — requires mapping payment to org
-    # For now: log and return 200 to prevent Razorpay retry storms
-    logger.info(f"Razorpay webhook received: {len(body_bytes)} bytes")
+    org_id = _find_org_by_razorpay_signature(body_bytes, signature)
+    if not org_id:
+        raise HTTPException(status_code=401, detail="Invalid Razorpay webhook signature")
 
     try:
-        import json
         payload = json.loads(body_bytes)
         event = payload.get("event", "unknown")
-        logger.info(f"Razorpay webhook event: {event}")
-    except Exception:
-        pass
+    except json.JSONDecodeError:
+        event = "unknown"
 
-    return {"ok": True}
+    logger.info(f"Razorpay webhook received for org {org_id}: event={event}")
+    background_tasks.add_task(_process_org_sync, org_id)
+
+    return {"ok": True, "event": event}
 
 
 @app.post("/api/webhooks/shopify")
 async def shopify_webhook(
     request: Request,
-    x_shopify_hmac_sha256: str | None = Header(None),
-    x_shopify_topic: str | None = Header(None),
+    background_tasks: BackgroundTasks,
+    x_shopify_hmac_sha256: str | None = Header(None, alias="X-Shopify-Hmac-Sha256"),
+    x_shopify_shop_domain: str | None = Header(None, alias="X-Shopify-Shop-Domain"),
+    x_shopify_topic: str | None = Header(None, alias="X-Shopify-Topic"),
 ):
     """
     Shopify webhook receiver.
     Verifies HMAC-SHA256 using Shopify shared secret.
-    Currently logs events; extend to trigger real-time reconciliation.
     """
     if not x_shopify_hmac_sha256:
         raise HTTPException(status_code=400, detail="Missing Shopify HMAC header")
+    if not x_shopify_shop_domain:
+        raise HTTPException(status_code=400, detail="Missing Shopify shop domain header")
 
     body_bytes = await request.body()
     logger.info(
         f"Shopify webhook received: topic={x_shopify_topic}, "
-        f"size={len(body_bytes)} bytes"
+        f"shop={x_shopify_shop_domain}, size={len(body_bytes)} bytes"
     )
-    # TODO: verify HMAC, identify org by shop domain, trigger partial sync
-    return {"ok": True}
+
+    if not settings.SHOPIFY_WEBHOOK_SECRET:
+        logger.error("Shopify webhook received without SHOPIFY_WEBHOOK_SECRET configured")
+        raise HTTPException(status_code=503, detail="Shopify webhook verification is not configured")
+    if not _verify_shopify_webhook_signature(body_bytes, x_shopify_hmac_sha256):
+        raise HTTPException(status_code=401, detail="Invalid Shopify webhook signature")
+
+    org_id = _find_org_by_shop_domain(x_shopify_shop_domain)
+    if not org_id:
+        raise HTTPException(status_code=404, detail="Shopify shop domain not linked to any org")
+
+    try:
+        payload = json.loads(body_bytes)
+        event = x_shopify_topic or payload.get("topic") or payload.get("event") or "unknown"
+    except json.JSONDecodeError:
+        event = x_shopify_topic or "unknown"
+
+    logger.info(f"Shopify webhook event={event} for org {org_id}")
+    background_tasks.add_task(_process_org_sync, org_id)
+
+    return {"ok": True, "event": event}
 
 
 # ─── ITC Report ──────────────────────────────────────────────

@@ -16,6 +16,8 @@ _fernet: Fernet | None = None
 def _get_fernet() -> Fernet:
     global _fernet
     if _fernet is None:
+        if not settings.FERNET_KEY:
+            raise RuntimeError("FERNET_KEY is required for credential encryption")
         key = settings.FERNET_KEY.encode()
         _fernet = Fernet(key)
     return _fernet

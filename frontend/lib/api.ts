@@ -58,6 +58,19 @@ export interface Transaction {
   ecom_platform: "shopify" | "woocommerce";
   shopify_created_at: string;
   synced_at: string;
+  ai_classification: string | null;
+  ai_confidence: number | null;
+  ai_explanation: string | null;
+  ai_suggested_action: string | null;
+  ai_processed_at: string | null;
+}
+
+export interface ClassificationResult {
+  classification: "Fee Mismatch" | "Partial Return" | "Timing Issue" | "GST Error" | "Other";
+  confidence: number;
+  explanation: string;
+  suggested_action: string;
+  processed_at: string;
 }
 
 export interface SyncLog {
@@ -141,6 +154,9 @@ export const api = {
       body: JSON.stringify({ key_id: keyId, key_secret: keySecret, webhook_secret: webhookSecret }),
     }),
 
+  disconnectRazorpay: () =>
+    apiFetch<{ ok: boolean }>("/api/connect/razorpay", { method: "DELETE" }),
+
   disconnectShopify: () =>
     apiFetch<{ ok: boolean }>("/api/connect/shopify", { method: "DELETE" }),
 
@@ -180,6 +196,9 @@ export const api = {
 
   getTransaction: (id: string) =>
     apiFetch<Transaction>(`/api/transactions/${id}`),
+
+  classifyTransaction: (id: string) =>
+    apiFetch<ClassificationResult>(`/api/transactions/${id}/classify`, { method: "POST" }),
 
   // Sync
   getSyncLogs: (page = 1) =>

@@ -2,6 +2,9 @@
   "name": "d2c-meets-fintech-reconciliation-frontend",
   "version": "2.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

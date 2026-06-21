@@ -15,21 +15,21 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "ghost" | "trap" | "variance" | "shopify" | "woocommerce">("all");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    checkAuth();
-    loadData();
-  }, []);
-
-  async function checkAuth() {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) {
-      router.replace("/login");
-    }
-  }
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        router.replace("/login");
+      } else {
+        setAuthChecked(true);
+        loadData();
+      }
+    });
+  }, [router]);
 
   async function loadData() {
     setLoading(true);
@@ -104,7 +104,7 @@ export default function DashboardPage() {
     },
   ] : [];
 
-  if (loading) {
+  if (!authChecked || loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">

@@ -3,12 +3,12 @@
 
 **Document Title:** AI-Powered Discrepancy Classifier & Smart Reconciliation Workflow  
 **Project Name:** D2C Meets Fintech Reconciliation  
-**Product Owner:** [Intern Product Manager]  
-**Organization:** Logibricks Technologies  
+**Product Owner:** Anshika Mishra
+**Organization:** Independent portfolio case study
 **Document Date:** June 2026  
 **Version:** 2.0 (Comprehensive)  
-**Status:** Engineering Review & Stakeholder Approval  
-**Distribution:** Engineering Team, Finance Stakeholders, Founder, Product Leadership  
+**Status:** Implemented prototype
+**Distribution:** Portfolio reviewers and prospective product/engineering stakeholders
 
 ---
 
@@ -52,7 +52,7 @@ Over the past 3–4 years, India has experienced explosive growth in Direct-to-C
 
 ### 2.2 Why This Project Exists
 
-Logibricks Technologies recognized an opportunity to build a **best-in-class financial operations solution** for D2C brands. The AI Discrepancy Classifier represents Phase 2 of the reconciliation platform — adding intelligence and automation on top of deterministic matching.
+This independent case study explores an opportunity to build a **best-in-class financial operations solution** for D2C brands. The AI Discrepancy Classifier represents a proposed second phase of the reconciliation platform—adding intelligence and automation on top of deterministic matching.
 
 This project also serves as a **comprehensive product management & engineering showcase** for an internship role, demonstrating:
 - End-to-end product thinking (vision → design → implementation)
@@ -138,7 +138,7 @@ This project also serves as a **comprehensive product management & engineering s
 - **Extensibility:** Easy to add new platforms (Flipkart, Amazon Seller Central) without re-engineering AI layer
 - **Cost Optimization:** Pay-per-use LLM model avoids fixed infrastructure costs
 
-### 4.4 For Logibricks (Product Company)
+### 4.4 For a Reconciliation SaaS Product Company
 
 - **Differentiation:** First-to-market AI reconciliation tool for Indian D2C market
 - **Recurring Revenue:** SaaS positioning: base reconciliation + AI classification as premium tier
@@ -590,7 +590,7 @@ PostgreSQL        (Celery)       (Grok/Claude)
 
 ## 14. Business Model & Product Strategy
 
-### 14.1 Why This Project Fits Logibricks
+### 14.1 Hypothetical Strategic Fit for a Reconciliation SaaS Company
 
 1. **Market Opportunity:** Indian D2C/Quick Commerce growing 30%+ annually
 2. **Differentiation:** First AI reconciliation tool for Indian market
@@ -675,7 +675,7 @@ PostgreSQL        (Celery)       (Grok/Claude)
 
 ## 17. Approval & Sign-Off
 
-**Prepared By:** [Intern Product Manager], Logibricks Technologies  
+**Prepared By:** Anshika Mishra
 **Date:** June 2026  
 **Status:** Ready for Engineering Review
 

@@ -3,9 +3,10 @@ export const dynamic = 'force-dynamic';
 // d2c-meets-fintech-reconciliation/frontend/app/connect/page.tsx
 // Onboarding wizard: Choose platform → Connect Shopify OR WooCommerce → Connect Razorpay
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 type Step = "org" | "platform" | "shopify" | "woocommerce" | "razorpay" | "done";
 type Platform = "shopify" | "woocommerce";
@@ -27,6 +28,7 @@ export default function ConnectPage() {
   const [step, setStep] = useState<Step>("org");
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [loading, setLoading] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [error, setError] = useState("");
 
   // Org
@@ -57,6 +59,34 @@ export default function ConnectPage() {
       setStep("platform");
     } catch (err: unknown) { setError(err instanceof Error ? err.message : "Failed"); }
     setLoading(false);
+  }
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) {
+        router.replace("/login");
+      } else {
+        try {
+          await api.getConnectionStatus();
+          // Existing organizations can re-enter the wizard without trying to
+          // create a duplicate organization.
+          setStep("platform");
+        } catch {
+          // A new user has no organization yet and should start at step one.
+          setStep("org");
+        } finally {
+          setAuthChecked(true);
+        }
+      }
+    });
+  }, [router]);
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-slate-500 text-sm">Checking authentication...</div>
+      </div>
+    );
   }
 
   function handlePlatformChoice(p: Platform) {
