@@ -4,16 +4,17 @@
 > A production-minded product demonstration
 
 **Built to showcase end-to-end product thinking** — from PRD to polished implementation.
+
 ---
 
 ## ⚡ At a Glance
 
-| Aspect                  | Details                                      |
-|-------------------------|----------------------------------------------|
-| **Core Focus**          | D2C + Quick Commerce Fintech Reconciliation  |
-| **Key Deliverable**     | AI-Powered Discrepancy Classifier            |
-| **Time to Understand**  | < 10 seconds                                 |
-| **Demo Ready**          | ✅ Standalone classifier + authenticated app |
+| Aspect                 | Details                                       |
+|------------------------|-----------------------------------------------|
+| **Core Focus**         | D2C + Quick Commerce Fintech Reconciliation   |
+| **Key Deliverable**    | AI-Powered Discrepancy Classifier             |
+| **Time to Understand** | < 10 seconds                                  |
+| **Demo Ready**         | ✅ Standalone classifier + authenticated app  |
 
 ---
 
@@ -21,14 +22,14 @@
 
 This project was deliberately built to map directly to Logibricks Product Intern requirements:
 
-| Logibricks Requirement                  | How It's Demonstrated                                                                 | Evidence |
-|-----------------------------------------|---------------------------------------------------------------------------------------|----------|
-| **Owning PRDs end-to-end**              | Full Product Requirements Document for AI feature                                    | [PRD →](./docs/PRD_AI_Discrepancy_Classifier_Comprehensive.md) |
-| **Working with engineering on APIs**    | Designed a public demo classifier and authenticated persistence endpoint             | `backend/routes/ai.py` + registration in `main.py` |
-| **Database-level logic**                | AI classification results persisted with full schema design                          | `ai_classification`, `ai_confidence`, `ai_explanation`, `ai_suggested_action`, `ai_processed_at` |
-| **Building AI-powered internal tools**  | Structured LLM prompt + classification workflow with graceful fallbacks              | Domain-specific prompt for Indian D2C/Quick Commerce |
-| **Deep e-commerce / quick commerce**    | Native support for Shopify + WooCommerce + Razorpay with realistic data flows        | Multi-platform reconciliation engine |
-| **Fintech reconciliation & edge cases** | Handles ghost orders, refund traps, partial returns, fee mismatches, GST/ITC issues  | Reconciliation logic + alerts + exports |
+| Logibricks Requirement                   | How It's Demonstrated                                                                | Evidence |
+|------------------------------------------|--------------------------------------------------------------------------------------|----------|
+| **Owning PRDs end-to-end**               | Full Product Requirements Document for AI feature                                    | [PRD →](./docs/PRD_AI_Discrepancy_Classifier_Comprehensive.md) |
+| **Working with engineering on APIs**     | Designed a public demo classifier and authenticated persistence endpoint             | `backend/routes/ai.py` |
+| **Database-level logic**                 | AI classification results persisted with full schema design                          | `ai_classification`, `ai_confidence`, `ai_explanation`, `ai_suggested_action` |
+| **Building AI-powered internal tools**   | Structured LLM prompt + classification workflow with graceful fallbacks              | Domain-specific prompt for Indian D2C/Quick Commerce |
+| **Deep e-commerce / quick commerce**     | Native support for Shopify + WooCommerce + Razorpay with realistic data flows        | Multi-platform reconciliation engine |
+| **Fintech reconciliation & edge cases**  | Handles ghost orders, refund traps, partial returns, fee mismatches, GST/ITC issues  | Reconciliation logic + alerts + exports |
 
 ---
 
@@ -37,75 +38,135 @@ This project was deliberately built to map directly to Logibricks Product Intern
 **Backend**
 - FastAPI + Uvicorn
 - Supabase (PostgreSQL + Row Level Security + Auth)
-- Python (Pydantic, httpx)
-- Platform integrations: Shopify Admin API, WooCommerce, Razorpay
+- Python (Pydantic v2, httpx, cryptography)
+- Platform integrations: Shopify Admin API, WooCommerce REST API, Razorpay
 
 **Frontend**
 - Next.js 14 + TypeScript + React
-- Tailwind CSS + Radix UI + shadcn components
-- Supabase client
+- Tailwind CSS + shadcn/ui components
+- Supabase client auth
 - Recharts (visualizations)
 
-**Other**
-- Celery + Redis (background jobs)
+**Infrastructure**
+- Celery + Redis (background sync jobs)
 - Resend (email alerts)
-- Full database schema with audit logs, thresholds, and multi-platform support
+- Fernet encryption for all stored credentials
+- Full database schema with audit logs, RLS policies, dead-letter queue
 
 ---
 
 ## ✨ Key Features
 
 - **🤖 AI Discrepancy Classifier**  
-  `POST /api/ai/classify` returns a safe, stateless demo classification. Authenticated users can run `POST /api/transactions/{id}/classify` to persist an analysis to their organization’s transaction.
+  `POST /api/ai/classify` returns a stateless demo classification. Authenticated users can run `POST /api/transactions/{id}/classify` to persist analysis to their org's transaction record.
 
 - **🔄 Multi-Platform Reconciliation Engine**  
-  Shopify + WooCommerce order matching against Razorpay settlements. Detects ghost orders, variances, refund traps, and partial refunds.
+  Shopify + WooCommerce order matching against Razorpay settlements. Detects ghost orders, variances, refund traps, and partial refunds. All amounts stored as BIGINT paise — no floats.
 
 - **📊 Modern Dashboard**  
-  Real-time transaction view, filters by platform/status, AI insights visible in the UI.
+  Real-time transaction view with filters by platform (Shopify/WooCommerce) and status (Ghost/Traps/Variance). AI insights visible inline.
 
 - **🔔 Intelligent Alerts**  
-  Configurable thresholds for ghost orders and variances. Multi-channel support (email, Slack, WhatsApp).
+  Configurable per-org thresholds. Multi-channel: email (Resend), Slack webhook, WhatsApp (Interakt/Twilio).
 
 - **📤 Export & Compliance**  
-  Tally ERP export + ITC recovery reporting (Razorpay fees + GST).
+  Tally ERP XML export + ITC recovery reporting (Razorpay fees + GST).
 
-- **🔐 Enterprise-Oriented Foundations**
-  Supabase RLS, encrypted credentials, audit logs, role-based access (Owner/Admin/CA/Viewer).
+- **🔐 Enterprise Foundations**  
+  Supabase RLS, Fernet-encrypted credentials, audit logs, RBAC (Owner/Admin/CA/Viewer), dead-letter queue, auto plan upgrade at ₹10L GMV.
 
 ---
 
-## 🚀 How to Run
+## 🚀 How to Run Locally
 
-### 1. Backend (from the repository root)
+### Prerequisites
+- Python 3.11+ (3.13 works)
+- Node.js 20+ (install via `winget install OpenJS.NodeJS.LTS` on Windows)
+- A [Supabase](https://supabase.com) project (free tier is fine)
+
+---
+
+### Step 1: Supabase Setup
+
+1. Create a new Supabase project (region: South Asia Mumbai or Singapore)
+2. Go to **SQL Editor** → run `database/schema.sql`
+3. Run `database/migration_woocommerce.sql`
+4. Go to **Settings → API Keys → Legacy** and copy:
+   - Project URL
+   - `anon public` key
+   - `service_role secret` key
+
+---
+
+### Step 2: Generate a Fernet Key
+
 ```bash
-# Python 3.11 is required (the repository pins 3.11.8).
-pip install -r backend/requirements.txt
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
 
-# Required for data-backed routes: Supabase credentials + FERNET_KEY
-# Optional but recommended: LLM_API_KEY for real AI classification
-# Required when enabling Shopify webhooks: SHOPIFY_WEBHOOK_SECRET
-# Razorpay webhook secret is configured per org during Razorpay connect
+---
+
+### Step 3: Environment Files
+
+Create `.env` in the **project root** (not inside `/backend`):
+
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_ANON_KEY=your-anon-key
+
+FERNET_KEY=your-generated-fernet-key
+CRON_SECRET=any-random-string
+
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=alerts@example.com
+SENTRY_DSN=
+
+APP_ENV=development
+FRONTEND_URL=http://localhost:3000
+LOG_LEVEL=INFO
+```
+
+Create `frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+---
+
+### Step 4: Backend
+
+```bash
+# From project root
+pip install postgrest supabase --upgrade
+pip install limits slowapi
+pip install -r backend/requirements.txt --only-binary=:all:
+
 uvicorn backend.main:app --reload --port 8000
 ```
 
-### 2. Frontend
+Health check: `http://localhost:8000/health` → `{"status":"ok","version":"2.0.0"}`
+
+> **Windows note:** If pydantic-core fails to build, run `pip install "pydantic>=2.7.1" "pydantic-core" --only-binary=:all:` first.
+
+---
+
+### Step 5: Frontend
+
 ```bash
-# Node.js 20 is recommended (see .nvmrc).
 cd frontend
 npm install
 npm run dev
 ```
 
-For local development, create `frontend/.env.local` with:
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
+App runs at `http://localhost:3000`
 
-### 3. Test the AI Tool (works standalone)
-See **[TEST.md](./TEST.md)** for the exact curl command. The `/api/ai/classify` endpoint runs without Supabase or LLM keys.
+---
+
+### Step 6: Test the AI Classifier (works standalone, no keys needed)
 
 ```bash
 curl -X POST http://localhost:8000/api/ai/classify \
@@ -120,31 +181,29 @@ curl -X POST http://localhost:8000/api/ai/classify \
   }'
 ```
 
-> The public endpoint never reads or writes application data. Use the authenticated transaction-classification endpoint to persist results.
+See **[TEST.md](./TEST.md)** for more test cases.
 
 ---
 
 ## 📄 Product Requirements Document
 
-**Full PRD for the AI Discrepancy Classifier** (including problem statement, user stories, functional requirements, edge cases, and success metrics):
+Full PRD for the AI Discrepancy Classifier (problem statement, user stories, functional requirements, edge cases, success metrics):
 
 → **[docs/PRD_AI_Discrepancy_Classifier_Comprehensive.md](./docs/PRD_AI_Discrepancy_Classifier_Comprehensive.md)**
-
-This document demonstrates clear product thinking, scoping, and communication skills.
 
 ---
 
 ## 💡 Why This Project?
 
-**Fictional Eureka**:
+**Fictional Eureka** demonstrates:
 
 - End-to-end ownership of a real, high-impact problem (settlement reconciliation)
 - Clear product documentation (PRD)
-- Hands-on collaboration with engineering (API + DB schema design)
-- Practical use of AI as an internal productivity tool
-- Deep understanding of D2C, Quick Commerce, and Fintech edge cases
+- Hands-on API + DB schema design
+- Practical AI integration as an internal productivity tool
+- Deep understanding of D2C, Quick Commerce, and Indian fintech edge cases (GST, Razorpay fees, platform commissions)
 
-This is not just a side project — it’s a **portfolio piece** built to reflect the exact responsibilities of a Product Intern at a fintech/e-commerce company.
+This is not just a side project — it's a **portfolio piece** built to reflect the exact responsibilities of a Product Intern at a fintech/e-commerce company.
 
 ---
 
