@@ -227,5 +227,5 @@ This is not just a side project — it's a **portfolio piece** built to reflect 
 ---
 
 **Built with ❤️ by Anshika**
-
+find it crazy?!? Hit the star button broskii
 *Ready for discussion. Happy to walk through the PRD, API design decisions, or reconciliation logic.*
