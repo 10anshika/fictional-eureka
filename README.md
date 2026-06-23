@@ -10,7 +10,6 @@
 
 | Aspect                  | Details                                      |
 |-------------------------|----------------------------------------------|
-| **Role Targeted**       | Product Intern                               |
 | **Core Focus**          | D2C + Quick Commerce Fintech Reconciliation  |
 | **Key Deliverable**     | AI-Powered Discrepancy Classifier            |
 | **Time to Understand**  | < 10 seconds                                 |
