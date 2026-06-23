@@ -1,11 +1,21 @@
-# 🚀 Fictional Eureka
+# 🚀 Fictional Eureka(automated CA assistant for D2C finance teams)
 
 > **D2C meets Fintech Reconciliation**  
 > A production-minded product demonstration
+Fictional Eureka is a B2B SaaS fintech tool — specifically a payment reconciliation platform for Indian D2C (direct-to-consumer) brands.
 
 **Built to showcase end-to-end product thinking** — from PRD to polished implementation.
 
 ---
+The real-world problem it solves:
+Indian D2C brands sell on Shopify or WooCommerce and collect payments via Razorpay. But the money that Razorpay actually settles to their bank account never exactly matches what Shopify shows as collected — because of:
+
+Razorpay's fees + GST
+Refunds that show as processed on Shopify but haven't actually reversed on Razorpay yet (refund traps)
+Payments that appear in Shopify but have no corresponding Razorpay record (ghost orders)
+Amount mismatches due to commission changes during sale events
+
+Finance teams at these brands spend hours every month manually matching these records in Excel. Fictional Eureka automates that entire process.
 
 ## ⚡ At a Glance
 
@@ -192,6 +202,15 @@ Full PRD for the AI Discrepancy Classifier (problem statement, user stories, fun
 → **[docs/PRD_AI_Discrepancy_Classifier_Comprehensive.md](./docs/PRD_AI_Discrepancy_Classifier_Comprehensive.md)**
 
 ---
+## The AI layer on top:
+When a discrepancy is found, instead of just flagging it, the system sends it to an LLM that classifies why it happened (commission change? GST rounding? genuine fraud?) and suggests what action to take.
+
+## What makes it fintech specifically:
+
+Works with real payment gateway APIs (Razorpay)
+Handles ITC (Input Tax Credit) recovery for GST on payment fees
+Exports to Tally ERP (what Indian accountants actually use)
+All money stored as integer paise — standard fintech practice to avoid floating point errors
 
 ## 💡 Why This Project?
 
